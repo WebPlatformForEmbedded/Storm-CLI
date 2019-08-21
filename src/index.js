@@ -5,13 +5,16 @@ import Contra from 'contra'
 import Moment from 'moment'
 
 import StormRunner from 'storm'
-import Tests from 'storm-testcases'
+import StormTestcases from 'storm-testcases'
+import MyTestcases from '../testcases'
 import Reporter from './reporter'
+
+const Testcases = [...MyTestcases, ...StormTestcases]
 
 Inquirer.registerPrompt('checkbox-plus', CheckboxPlus)
 
 // construct a list of tests to show as options
-const listTests = tests => {
+const listTestcases = tests => {
   let maxTitleLength = tests.reduce((max, test) => {
     return Math.max(test.title.length, max)
   }, 0)
@@ -84,7 +87,7 @@ const center = str => {
 const run = async () => {
   clearConsole()
 
-  const tests = listTests(Tests)
+  const tests = listTestcases(Testcases)
   const questions = [
     {
       type: 'checkbox-plus',
@@ -121,7 +124,7 @@ const run = async () => {
       Contra.each.series(
         answers.TESTS,
         (test, next) => {
-          StormRunner(Tests[test], Reporter())
+          StormRunner(Testcases[test], Reporter())
             .then(() => {
               setTimeout(next, 1000)
             })
