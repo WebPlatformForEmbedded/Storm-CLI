@@ -1,14 +1,14 @@
 import Inquirer from 'inquirer'
-import ChexkboxPlus from 'inquirer-checkbox-plus-prompt'
+import CheckboxPlus from 'inquirer-checkbox-plus-prompt'
 import Chalk from 'chalk'
 import Contra from 'contra'
 import Moment from 'moment'
 
-import Runner from '../testrunner'
-import Tests from '../tests'
+import StormRunner from 'storm'
+import Tests from 'storm-testcases'
 import Reporter from './reporter'
 
-Inquirer.registerPrompt('checkbox-plus', ChexkboxPlus)
+Inquirer.registerPrompt('checkbox-plus', CheckboxPlus)
 
 // construct a list of tests to show as options
 const listTests = tests => {
@@ -121,7 +121,7 @@ const run = async () => {
       Contra.each.series(
         answers.TESTS,
         (test, next) => {
-          Runner(Tests[test], Reporter())
+          StormRunner(Tests[test], Reporter())
             .then(() => {
               setTimeout(next, 1000)
             })
