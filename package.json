@@ -6,7 +6,8 @@
     "start": "node -r esm src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint '**/*.js'",
-    "lint:fix": "eslint '**/*.js' --fix"
+    "lint:fix": "eslint '**/*.js' --fix",
+    "postinstall": "test -e config.js || cp config.example.js config.js"
   },
   "lint-staged": {
     "*.js": [

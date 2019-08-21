@@ -9,6 +9,8 @@ import StormTestcases from 'storm-testcases'
 import MyTestcases from '../testcases'
 import Reporter from './reporter'
 
+import Config from '../config'
+
 const Testcases = [...MyTestcases, ...StormTestcases]
 
 Inquirer.registerPrompt('checkbox-plus', CheckboxPlus)
@@ -124,13 +126,11 @@ const run = async () => {
       Contra.each.series(
         answers.TESTS,
         (test, next) => {
-          StormRunner(Testcases[test], Reporter())
+          StormRunner(Testcases[test], Reporter(), Config.thunder)
             .then(() => {
               setTimeout(next, 1000)
             })
-            .catch(() => {
-              setTimeout(() => next(), 1000)
-            })
+            .catch(e => {})
         },
         () => {
           finishRunning()
