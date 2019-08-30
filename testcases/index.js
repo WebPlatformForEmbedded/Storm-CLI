@@ -1,10 +1,23 @@
 import fs from 'fs'
+import path from 'path'
 
 const testcases = []
 
-fs.readdirSync(__dirname).forEach(file => {
-  if (__dirname + '/' + file !== __filename && /\.js/.test(file)) {
-    testcases.push(require(__dirname + '/' + file).default)
+const read = dir => {
+  return fs
+    .readdirSync(dir)
+    .reduce(
+      (files, file) =>
+        fs.statSync(path.join(dir, file)).isDirectory()
+          ? files.concat(read(path.join(dir, file)))
+          : files.concat(path.join(dir, file)),
+      []
+    )
+}
+
+read(__dirname).forEach(file => {
+  if (file !== __filename && /\.js/.test(file)) {
+    testcases.push(require(file).default)
   }
 })
 
