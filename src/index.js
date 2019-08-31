@@ -57,7 +57,7 @@ const startRunning = () => {
   )
 }
 
-const finishRunning = () => {
+const finishRunning = tests => {
   let end = Moment()
   let duration = Moment.duration(end.diff(start))
   if (duration.asSeconds() < 60) {
@@ -76,6 +76,29 @@ const finishRunning = () => {
       ].join('\n')
     )
   )
+
+  Inquirer.prompt([
+    {
+      type: 'expand',
+      message: 'Press R to run again or M to go back to the menu',
+      name: 'menuOrRunAgain',
+      choices: [
+        {
+          key: 'r',
+          name: 'Run again',
+          value: 'runagain',
+        },
+        {
+          key: 'm',
+          name: 'Menu',
+          value: 'menu',
+        },
+      ],
+    },
+  ]).then(_r => {
+    if (_r.menuOrRunAgain === 'runagain') run(tests)
+    else menu()
+  })
 }
 
 const renderSeparator = separator => {
@@ -85,8 +108,23 @@ const renderSeparator = separator => {
 const center = str => {
   return ' '.repeat((process.stdout.columns - str.length) / 2) + str
 }
+const run = tests => {
+  Contra.each.series(
+    tests,
+    (test, next) => {
+      StormRunner(Testcases[test], Reporter(), Config.thunder)
+        .then(() => {
+          setTimeout(next, 1000)
+        })
+        .catch(e => {})
+    },
+    () => {
+      finishRunning(tests)
+    }
+  )
+}
 
-const run = async () => {
+const menu = async () => {
   clearConsole()
 
   const tests = listTestcases(Testcases)
@@ -123,26 +161,14 @@ const run = async () => {
       clearConsole()
       startRunning()
 
-      Contra.each.series(
-        answers.TESTS,
-        (test, next) => {
-          StormRunner(Testcases[test], Reporter(), Config.thunder)
-            .then(() => {
-              setTimeout(next, 1000)
-            })
-            .catch(e => {})
-        },
-        () => {
-          finishRunning()
-        }
-      )
+      run(answers.TESTS)
     } else {
       console.log(Chalk.red('Please select 1 or more tests to run!'))
       setTimeout(() => {
-        run()
+        menu()
       }, 1000)
     }
   })
 }
 
-run()
+menu()
