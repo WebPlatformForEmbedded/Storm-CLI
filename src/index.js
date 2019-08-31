@@ -80,24 +80,29 @@ const finishRunning = tests => {
   Inquirer.prompt([
     {
       type: 'expand',
-      message: 'Press R to run again or M to go back to the menu',
-      name: 'menuOrRunAgain',
+      message: [
+        'Press',
+        Chalk.yellow('R'),
+        'to run again or',
+        Chalk.yellow('M'),
+        'to go back to the menu',
+      ].join(' '),
+      name: 'RUN_AGAIN',
       choices: [
         {
-          key: 'r',
-          name: 'Run again',
-          value: 'runagain',
+          key: 'R',
+          name: 'Run tests again',
+          value: true,
         },
         {
-          key: 'm',
-          name: 'Menu',
-          value: 'menu',
+          key: 'M',
+          name: 'Back to menu',
+          value: false,
         },
       ],
     },
-  ]).then(_r => {
-    if (_r.menuOrRunAgain === 'runagain') run(tests)
-    else menu()
+  ]).then(answers => {
+    answers.RUN_AGAIN === true ? run(tests) : menu()
   })
 }
 
