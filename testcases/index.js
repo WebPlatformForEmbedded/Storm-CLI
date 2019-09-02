@@ -1,8 +1,6 @@
 import fs from 'fs'
 import path from 'path'
 
-const testcases = []
-
 const read = dir => {
   return fs
     .readdirSync(dir)
@@ -15,10 +13,8 @@ const read = dir => {
     )
 }
 
-read(__dirname).forEach(file => {
-  if (file !== __filename && /\.js/.test(file)) {
-    testcases.push(require(file).default)
-  }
-})
+const testcases = read(__dirname)
+  .filter(file => /\.test\.js/.test(file))
+  .map(file => require(file).default)
 
 export default testcases
