@@ -24,8 +24,22 @@ export default () => {
       }
       render(log)
     },
-    log(msg) {
-      log.log.push(msg)
+    log() {
+      if (arguments.length === 1 && typeof arguments[0] === 'string') {
+        log.log.push(arguments[0])
+      } else {
+        log.log.push(
+          [...arguments]
+            .map(argument => {
+              return typeof argument === 'string' ? argument : JSON.stringify(argument)
+            })
+            .map((line, index) => {
+              return index > 0 ? indent(line, 2) : line
+            })
+            .join('\n')
+        )
+      }
+
       render(log)
     },
     sleep(milliseconds) {
