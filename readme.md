@@ -1,5 +1,7 @@
 # Storm CLI
 
+Command line interface for the Storm Test runner. Allows to invoke tests and see results locally.
+
 ## Getting started
 
 1. Install the dependencies
