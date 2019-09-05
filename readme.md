@@ -14,6 +14,15 @@ npm install
 npm start
 ```
 
+## Single test execution
+
+For ease of test development you can execute a single test directly from the CLI:
+```
+npm run single -i <testcase.test.js>
+```
+
+Note: test case needs to be present in `./testcases/` of the CLI.
+
 ## Documentation
 
 Documentation on test syntax and reporters can be found [here](https://github.com/WebPlatformForEmbedded/Storm/blob/master/docs/readme.md)
