@@ -5,13 +5,13 @@ import Contra from 'contra'
 import Moment from 'moment'
 
 import StormRunner from 'storm'
-import StormTestcases from 'storm-testcases'
-import MyTestcases from '../testcases'
+// import StormTestcases from 'storm-testcases'
+import Testcases from '../testcases'
 import Reporter from './reporter'
 
 import Config from '../config'
 
-const Testcases = [...MyTestcases, ...StormTestcases]
+// const Testcases = [...MyTestcases, ...StormTestcases]
 
 Inquirer.registerPrompt('checkbox-plus', CheckboxPlus)
 

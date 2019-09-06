@@ -12,7 +12,7 @@
   },
   "lint-staged": {
     "*.js": [
-      "npm run lint:fix",
+      "eslint --fix",
       "git add"
     ]
   },
@@ -37,8 +37,7 @@
     "inquirer-checkbox-plus-prompt": "^1.0.1",
     "log-update": "^3.2.0",
     "moment": "^2.24.0",
-    "storm": "github:WebPlatformForEmbedded/Storm",
-    "storm-testcases": "github:WebPlatformForEmbedded/Storm-Testcases"
+    "storm": "git+https://github.com/WebPlatformForEmbedded/Storm.git"
   },
   "devDependencies": {
     "babel-eslint": "^10.0.1",
