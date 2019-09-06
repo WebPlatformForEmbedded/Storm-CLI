@@ -37,7 +37,7 @@
     "inquirer-checkbox-plus-prompt": "^1.0.1",
     "log-update": "^3.2.0",
     "moment": "^2.24.0",
-    "storm": "github:WebPlatformForEmbedded/Storm#dev",
+    "storm": "git+https://github.com/WebPlatformForEmbedded/Storm.git",
     "storm-testcases": "github:WebPlatformForEmbedded/Storm-Testcases"
   },
   "devDependencies": {
