@@ -14,6 +14,7 @@ const read = dir => {
 }
 
 const testcases = read(__dirname)
+  .filter(file => /(node_modules|.git)/.test(file) === false)
   .filter(file => /\.test\.js/.test(file))
   .map(file => require(file).default)
 
