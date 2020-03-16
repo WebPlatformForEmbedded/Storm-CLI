@@ -121,7 +121,10 @@ const run = tests => {
         .then(() => {
           setTimeout(next, 1000)
         })
-        .catch(e => {})
+        .catch(e => {
+          console.log(e)
+          setTimeout(next, 1000)
+        })
     },
     () => {
       finishRunning(tests)
