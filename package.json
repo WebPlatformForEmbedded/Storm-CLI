@@ -1,14 +1,15 @@
 {
   "name": "storm-cli",
-  "version": "0.0.1",
-  "author": "Michiel van der Geest <hello@michielvandergeest.com>",
+  "version": "1.0.0",
+  "license": "Apache-2.0",
+  "author": "Michiel van der Geest <m.van.der.geest@metrological.com>",
   "scripts": {
     "start": "node -r esm src/index.js",
     "single": "node -r esm src/single.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint '**/*.js'",
     "lint:fix": "eslint '**/*.js' --fix",
-    "postinstall": "(test -e config.js || cp config.example.js config.js) && (test -e testcases/Storm-Testcases || git clone https://github.com/WebPlatformForEmbedded/Storm-Testcases.git testcases/Storm-Testcases)"
+    "postinstall": "(test -e config.js || cp config.example.js config.js) && (test -e testcases/Storm-Testcases || git clone https://github.com/WebPlatformForEmbedded/Storm-Testcases.git testcases/Storm-Testcases && cd testcases/Storm-Testcases && npm install)"
   },
   "lint-staged": {
     "*.js": [
