@@ -118,7 +118,7 @@ const run = tests => {
   Contra.each.series(
     tests,
     (test, next) => {
-      StormRunner(Testcases[test], Reporter(), Config.thunder)
+      StormRunner(test, Reporter(), Config.thunder)
         .then(() => {
           setTimeout(next, 1000)
         })
@@ -166,13 +166,15 @@ const menu = async category => {
   ]
 
   Inquirer.prompt(questions).then(answers => {
-    console.log(answers)
-
     if (answers.TESTS.length) {
       clearConsole()
       startRunning()
 
-      run(answers.TESTS)
+      run(
+        TestCases[category].filter((test, index) => {
+          if (answers.TESTS.indexOf(index) !== -1) return true
+        })
+      )
     } else {
       showCategories()
     }
