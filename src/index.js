@@ -5,13 +5,13 @@ import Contra from 'contra'
 import Moment from 'moment'
 
 import StormRunner from 'storm'
-// import StormTestcases from 'storm-testcases'
+
 import Testcases from '../testcases'
 import Reporter from './reporter'
 
 import Config from '../config'
 
-// const Testcases = [...MyTestcases, ...StormTestcases]
+const TestCases = Testcases()
 
 Inquirer.registerPrompt('checkbox-plus', CheckboxPlus)
 
@@ -40,6 +40,7 @@ const listTestcases = tests => {
 const clearConsole = () => {
   process.stdout.write('\x1b[2J')
   process.stdout.write('\x1b[0f')
+  console.log('Storm-CLI\n')
 }
 
 let start
@@ -129,10 +130,10 @@ const run = tests => {
   )
 }
 
-const menu = async () => {
+const menu = async category => {
   clearConsole()
 
-  const tests = listTestcases(Testcases)
+  const tests = listTestcases(TestCases[category])
   const questions = [
     {
       type: 'checkbox-plus',
@@ -144,6 +145,9 @@ const menu = async () => {
           'then press',
           Chalk.yellow('enter'),
           'to start the Testrunner!',
+          'To go',
+          Chalk.red('back'),
+          'press enter without selecting a test.',
         ].join(' '),
         [Chalk.yellow('➜'), Chalk.dim('Search by title / description:')].join(' '),
       ].join('\n'),
@@ -162,18 +166,40 @@ const menu = async () => {
   ]
 
   Inquirer.prompt(questions).then(answers => {
+    console.log(answers)
+
     if (answers.TESTS.length) {
       clearConsole()
       startRunning()
 
       run(answers.TESTS)
     } else {
-      console.log(Chalk.red('Please select 1 or more tests to run!'))
-      setTimeout(() => {
-        menu()
-      }, 1000)
+      showCategories()
     }
   })
 }
 
-menu()
+const showCategories = () => {
+  clearConsole()
+
+  const categories = Object.keys(TestCases)
+  const questions = [
+    {
+      type: 'list',
+      message: 'Select a category',
+      name: 'CATEGORIES',
+      choices: categories,
+      pageSize: process.stdout.rows || 20,
+    },
+  ]
+
+  Inquirer.prompt(questions).then(answers => {
+    if (answers.CATEGORIES) {
+      menu(answers.CATEGORIES)
+    } else {
+      showCategories()
+    }
+  })
+}
+
+showCategories()

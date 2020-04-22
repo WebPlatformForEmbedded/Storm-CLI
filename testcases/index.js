@@ -1,6 +1,8 @@
 import fs from 'fs'
 import path from 'path'
 
+const fileMap = {}
+
 const read = dir => {
   return fs
     .readdirSync(dir)
@@ -13,9 +15,20 @@ const read = dir => {
     )
 }
 
-const testcases = read(__dirname)
-  .filter(file => /(node_modules|.git)/.test(file) === false)
-  .filter(file => /\.test\.js/.test(file))
-  .map(file => require(file).default)
+export default () => {
+  read(__dirname)
+    .filter(file => /(node_modules|.git)/.test(file) === false)
+    .filter(file => /\.test\.js/.test(file))
+    .map(file => {
+      const category = path
+        .dirname(file)
+        .split(path.sep)
+        .pop()
 
-export default testcases
+      fileMap[category]
+        ? fileMap[category].push(require(file).default)
+        : (fileMap[category] = [require(file).default])
+    })
+
+  return fileMap
+}
