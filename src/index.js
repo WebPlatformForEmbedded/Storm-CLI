@@ -7,9 +7,11 @@ import Moment from 'moment'
 import StormRunner from 'storm'
 
 import Testcases from '../testcases'
-import Reporter from './reporter'
+import Reporter from './reporter_cli'
 
 import Config from '../config'
+
+import { clearConsole, center, renderSeparator } from './helpers/ui-helpers'
 
 const TestCases = Testcases()
 
@@ -36,27 +38,7 @@ const listTestcases = tests => {
   })
 }
 
-// clear console
-const clearConsole = () => {
-  process.stdout.write('\x1b[2J')
-  process.stdout.write('\x1b[0f')
-  console.log('Storm-CLI\n')
-}
-
 let start
-const startRunning = () => {
-  start = Moment()
-  console.log(
-    Chalk.yellow(
-      [
-        renderSeparator('='),
-        center('Starting TestRunner'),
-        center(start.format('DD-MM-YYYY h:mm:s')),
-        renderSeparator('='),
-      ].join('\n')
-    )
-  )
-}
 
 const finishRunning = tests => {
   let end = Moment()
@@ -103,26 +85,17 @@ const finishRunning = tests => {
       ],
     },
   ]).then(answers => {
-    answers.RUN_AGAIN === true ? run(tests) : menu()
+    answers.RUN_AGAIN === true ? run(tests) : showCategories()
   })
 }
 
-const renderSeparator = separator => {
-  return Chalk.dim((separator || '-').repeat(process.stdout.columns))
-}
-
-const center = str => {
-  return ' '.repeat((process.stdout.columns - str.length) / 2) + str
-}
 const run = tests => {
   Contra.each.series(
     tests,
     (test, next) => {
-      StormRunner(test, Reporter(), Config.thunder)
-        .then(() => {
-          setTimeout(next, 1000)
-        })
-        .catch(e => {})
+      StormRunner(test, Reporter(Config.thunder), Config.thunder).then(() => {
+        setTimeout(next, 1000)
+      })
     },
     () => {
       finishRunning(tests)
@@ -167,9 +140,6 @@ const menu = async category => {
 
   Inquirer.prompt(questions).then(answers => {
     if (answers.TESTS.length) {
-      clearConsole()
-      startRunning()
-
       run(
         TestCases[category].filter((test, index) => {
           if (answers.TESTS.indexOf(index) !== -1) return true
