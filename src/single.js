@@ -12,8 +12,12 @@ if (!filename || !fs.existsSync(testCasePath)) {
   import(testCasePath)
     .then(testCase => {
       StormRunner(testCase.default, 'console', Config.thunder)
-        .then(console.log)
-        .catch(console.error)
+        .then(() => {
+          process.exit()
+        })
+        .catch(() => {
+          process.exit(1)
+        })
     })
     .catch(console.error)
 }
