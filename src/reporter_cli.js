@@ -17,69 +17,60 @@ let renderLoop = null
 let data = {}
 
 export default config => {
-  data = {
-    host: config.host,
-    test: null,
-    steps: [],
-    status: 0,
-    log: [],
-  }
-
   return {
     init(test) {
-      data.test = test
-      data.title = test.title ? test.title : 'No title provided'
-      data.description = test.description ? test.description : 'No description provided'
-      data.steps = test.steps
-      data.status = 0
-      data.stepCount = Object.keys(test.steps).length
-      data.currentStep = 1
-      data.timeStarted = moment()
+      data = {
+        currentStep: 0,
+        description: test.description ? test.description : 'No description provided',
+        host: config.host,
+        log: [],
+        status: 0,
+        steps: Array.isArray(test.steps) ? test.steps : Object.values(test.steps),
+        timeStarted: moment(),
+        title: test.title ? test.title : 'No title provided',
+      }
 
-      renderLoop = setInterval(renderTaskProgress, 1000)
+      data.stepCount = data.steps.length
+      data.stepResults = new Array(test.steps.length)
       renderTaskProgress()
     },
     step(test, step) {
       data.currentStep = findStepByDescription(data.steps, step.description) + 1
+      data.stepResults[data.currentStep - 1] = 'RUN'
+      renderTaskProgress()
     },
     log(m) {
       data.log.push(m)
     },
-    sleep(milliseconds) {},
+    sleep(milliseconds) {
+      renderTaskProgress()
+    },
     pass(test, step) {
       const index = findStepByDescription(data.steps, step.description)
       if (index > -1) {
-        data.steps[index].status = 'PASS'
+        data.stepResults[index] = 'PASS'
       }
+
+      renderTaskProgress()
     },
     fail(test, step, err) {
       const index = findStepByDescription(data.steps, step.description)
       if (index > -1) {
-        data.steps[index].status = 'FAIL'
+        data.stepResults[index] = 'FAIL'
       }
+
+      //renderTaskProgress()
     },
     success(test) {
-      clearInterval(renderLoop)
-
       data.status = 1
-      renderTaskProgress()
+      //renderTaskProgress()
     },
     error(test, err) {
-      clearInterval(renderLoop)
-
       data.status = 2
-      renderTaskProgress()
+      //renderTaskProgress()
       renderLogs()
     },
-    finished(test) {
-      data = {
-        host: config.host,
-        test: null,
-        steps: [],
-        status: 0,
-        log: [],
-      }
-    },
+    finished(test) {},
   }
 }
 
@@ -112,17 +103,15 @@ const renderLogs = () => {
   })
 }
 
-const renderTask = (step, index) => {
-  const description = step.description.slice(0, 40)
-  const requiredPadding = 50 - description.length
-  let padding = ''
-  for (var j = 0; j < requiredPadding; j++) {
-    padding += ' '
+const renderTask = (step, index, result) => {
+  if (!step) {
+    return
   }
 
-  console.log(
-    center(` ${index + 1}. ${description} ${padding} ${step.status ? step.status : '...'}`)
-  )
+  const description = step.description
+    ? step.description.slice(0, 40).padEnd(50, ' ')
+    : ''.padEnd(50, ' ')
+  console.log(center(` ${index + 1}. ${description} ${result ? result : '...'}`))
 }
 
 const renderTaskProgress = () => {
@@ -140,8 +129,8 @@ const renderTaskProgress = () => {
     else progressBar += '-'
   }
 
-  console.log(center(`Task: ${data.title} \t\t\t Result: ${result}`))
-  console.log(center(`Host: ${data.host} \t\t\t Duration: ${getDurationString()}`))
+  console.log(center(`Task: ${data.title.padEnd(50)} Result: ${result}`))
+  console.log(center(`Host: ${data.host.padEnd(50)} Duration: ${getDurationString()}`))
   console.log(Chalk.white(renderSeparator('-')))
 
   /*
@@ -160,6 +149,6 @@ const renderTaskProgress = () => {
   // render individual tasks
   data.steps.forEach((step, index) => {
     if (data.steps.length > maxDisplaySteps && index < data.log.length - maxDisplaySteps) return
-    renderTask(step, index)
+    renderTask(step, index, data.stepResults[index])
   })
 }

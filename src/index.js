@@ -60,6 +60,21 @@ const finishRunning = tests => {
     )
   )
 
+  console.log()
+  console.log(center('Test summary:'))
+  tests.forEach((t, index) => {
+    console.log(
+      center(
+        `${index + 1}. ${t.title.slice(0, 40).padEnd(50, ' ')} ${
+          t.result !== undefined ? 'PASS' : 'FAIL'
+        }`
+      )
+    )
+    if (t.error) console.log(Chalk.red(center(`    ${t.error}`)))
+  })
+  console.log()
+  console.log(Chalk.yellow(renderSeparator('=')))
+
   Inquirer.prompt([
     {
       type: 'expand',
@@ -90,12 +105,19 @@ const finishRunning = tests => {
 }
 
 const run = tests => {
-  Contra.each.series(
+  Contra.map.series(
     tests,
     (test, next) => {
-      StormRunner(test, Reporter(Config.thunder), Config.thunder).then(() => {
-        setTimeout(next, 1000)
-      })
+      StormRunner(test, Reporter(Config.thunder), Config.thunder)
+        .then(result => {
+          test.result = result === undefined ? '' : result
+          setTimeout(next, 1000, null)
+        })
+        .catch(err => {
+          console.error(err)
+          test.error = err
+          setTimeout(next, 1000, null)
+        })
     },
     () => {
       finishRunning(tests)
