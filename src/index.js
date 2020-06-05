@@ -7,7 +7,7 @@ import Moment from 'moment'
 import StormRunner from 'storm'
 
 import Testcases from '../testcases'
-import Reporter from './reporter_cli'
+import Reporter from './reporters/index'
 
 import Config from '../config'
 
@@ -104,11 +104,12 @@ const finishRunning = tests => {
   })
 }
 
-const run = tests => {
+const run = (tests, reportFilename = null) => {
+  start = Moment()
   Contra.map.series(
     tests,
     (test, next) => {
-      StormRunner(test, Reporter(Config.thunder), Config.thunder)
+      StormRunner(test, Reporter({ reportFile: reportFilename, ...Config.thunder }), Config.thunder)
         .then(result => {
           test.result = result === undefined ? '' : result
           setTimeout(next, 1000, null)
@@ -125,7 +126,22 @@ const run = tests => {
   )
 }
 
-const menu = async category => {
+const getReportFilename = (writeReports = false) => {
+  if (writeReports) {
+    return Inquirer.prompt({
+      type: 'input',
+      name: 'filename',
+      message: 'Please provide report filename',
+      default: `report-${Moment().format('YYYYMDD-HHmmss')}.txt`,
+    }).then(answers => {
+      return answers.filename
+    })
+  } else {
+    return Promise.resolve(null)
+  }
+}
+
+const menu = async (category, selectAll = false) => {
   clearConsole()
 
   const tests = listTestcases(TestCases[category])
@@ -149,11 +165,14 @@ const menu = async category => {
       searchable: true,
       source: (selected, input) => {
         return new Promise(function(resolve) {
-          resolve(
-            tests.filter(test => {
+          resolve([
+            'Enable writing reports to file',
+            'Run all',
+            new Inquirer.Separator(),
+            ...tests.filter(test => {
               return test.name.toLowerCase().includes(input.toLowerCase())
-            })
-          )
+            }),
+          ])
         })
       },
       pageSize: process.stdout.rows || 20,
@@ -161,11 +180,26 @@ const menu = async category => {
   ]
 
   Inquirer.prompt(questions).then(answers => {
+    let writeReports = false
+
+    if (answers.TESTS.indexOf('Enable writing reports to file') !== -1) {
+      writeReports = true
+    }
+
+    if (answers.TESTS.indexOf('Run all') !== -1) {
+      return getReportFilename(writeReports).then(reportFilename =>
+        run(TestCases[category], reportFilename)
+      )
+    }
+
     if (answers.TESTS.length) {
-      run(
-        TestCases[category].filter((test, index) => {
-          if (answers.TESTS.indexOf(index) !== -1) return true
-        })
+      getReportFilename(writeReports).then(reportFilename =>
+        run(
+          TestCases[category].filter((test, index) => {
+            if (answers.TESTS.indexOf(index) !== -1) return true
+          }),
+          reportFilename
+        )
       )
     } else {
       showCategories()

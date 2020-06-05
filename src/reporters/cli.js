@@ -1,7 +1,7 @@
 import Chalk from 'chalk'
 import moment from 'moment'
 
-import { clearConsole, center, renderSeparator } from './helpers/ui-helpers'
+import { clearConsole, center, renderSeparator } from '../helpers/ui-helpers'
 
 const progressLookup = {
   0: 'In Progress',
