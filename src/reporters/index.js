@@ -3,7 +3,7 @@ import file from './file.js'
 
 export default config => {
   const reporters = [cli(config)]
-  //if (config.reportFilename !== null) reporters.push(file(config))
+  if (config.reportFilename !== null) reporters.push(file(config))
 
   const relayMessage = (fn, ...args) => {
     reporters.forEach(r => {
