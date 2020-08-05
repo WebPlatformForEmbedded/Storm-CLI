@@ -15,6 +15,8 @@ import { clearConsole, center, renderSeparator } from './helpers/ui-helpers'
 
 const TestCases = Testcases()
 
+let writeReports = false
+
 Inquirer.registerPrompt('checkbox-plus', CheckboxPlus)
 
 // construct a list of tests to show as options
@@ -141,36 +143,102 @@ const getReportFilename = (writeReports = false) => {
   }
 }
 
-const menu = async (category, selectAll = false) => {
+const menu = async (categories, selectAll = false) => {
+  clearConsole()
+  let displayTestCaseList = []
+  let testCaseList = []
+  categories.forEach(category => {
+    let testCaseListFromCategory = TestCases[category]
+    if (testCaseListFromCategory && testCaseListFromCategory.length) {
+      testCaseList.push(...TestCases[category])
+      displayTestCaseList.push(...listTestcases(TestCases[category]))
+    }
+  })
+  if (categories.includes('Enable writing reports to file')) {
+    writeReports = true
+  }
+  if (categories.length > 1 || categories.includes('Run all')) {
+    return getReportFilename(writeReports).then(reportFilename => run(testCaseList, reportFilename))
+  } else {
+    const questions = [
+      {
+        type: 'checkbox-plus',
+        name: 'TESTS',
+        message: [
+          [
+            'Select the test(s) you want to execute using the',
+            Chalk.yellow('spacebar'),
+            'then press',
+            Chalk.yellow('enter'),
+            'to start the Testrunner!',
+            'To go',
+            Chalk.red('back'),
+            'press enter without selecting a test.',
+          ].join(' '),
+          [Chalk.yellow('➜'), Chalk.dim('Search by title / description:')].join(' '),
+        ].join('\n'),
+        searchable: true,
+        source: (selected, input) => {
+          return new Promise(function(resolve) {
+            resolve([
+              'Enable writing reports to file',
+              'Run all',
+              new Inquirer.Separator(),
+              ...displayTestCaseList.filter(test => {
+                return test.name.toLowerCase().includes(input.toLowerCase())
+              }),
+            ])
+          })
+        },
+        pageSize: process.stdout.rows || 20,
+      },
+    ]
+
+    Inquirer.prompt(questions).then(answers => {
+      if (answers.TESTS.indexOf('Enable writing reports to file') !== -1) {
+        writeReports = true
+      }
+
+      if (answers.TESTS.indexOf('Run all') !== -1) {
+        return getReportFilename(writeReports).then(reportFilename =>
+          run(testCaseList, reportFilename)
+        )
+      }
+
+      if (answers.TESTS.length) {
+        getReportFilename(writeReports).then(reportFilename =>
+          run(
+            testCaseList.filter((test, index) => {
+              if (answers.TESTS.indexOf(index) !== -1) return true
+            }),
+            reportFilename
+          )
+        )
+      } else {
+        showCategories()
+      }
+    })
+  }
+}
+
+const showCategories = () => {
   clearConsole()
 
-  const tests = listTestcases(TestCases[category])
+  const categories = Object.keys(TestCases)
   const questions = [
     {
       type: 'checkbox-plus',
-      name: 'TESTS',
-      message: [
-        [
-          'Select the test(s) you want to execute using the',
-          Chalk.yellow('spacebar'),
-          'then press',
-          Chalk.yellow('enter'),
-          'to start the Testrunner!',
-          'To go',
-          Chalk.red('back'),
-          'press enter without selecting a test.',
-        ].join(' '),
-        [Chalk.yellow('➜'), Chalk.dim('Search by title / description:')].join(' '),
-      ].join('\n'),
-      searchable: true,
-      source: (selected, input) => {
+      message: 'Select a category',
+      name: 'CATEGORIES',
+      source: () => {
         return new Promise(function(resolve) {
           resolve([
-            'Enable writing reports to file',
-            'Run all',
             new Inquirer.Separator(),
-            ...tests.filter(test => {
-              return test.name.toLowerCase().includes(input.toLowerCase())
+            'Enable writing reports to file',
+            'Run all Plugin Tests',
+            new Inquirer.Separator(),
+            ...categories.filter(test => {
+              return test
             }),
           ])
         })
@@ -180,52 +248,14 @@ const menu = async (category, selectAll = false) => {
   ]
 
   Inquirer.prompt(questions).then(answers => {
-    let writeReports = false
-
-    if (answers.TESTS.indexOf('Enable writing reports to file') !== -1) {
-      writeReports = true
+    if (answers.CATEGORIES.indexOf('Run all') !== -1) {
+      let selectedCategories = []
+      selectedCategories.push(...categories)
+      selectedCategories.push(...answers.CATEGORIES)
+      return menu(selectedCategories)
     }
-
-    if (answers.TESTS.indexOf('Run all') !== -1) {
-      return getReportFilename(writeReports).then(reportFilename =>
-        run(TestCases[category], reportFilename)
-      )
-    }
-
-    if (answers.TESTS.length) {
-      getReportFilename(writeReports).then(reportFilename =>
-        run(
-          TestCases[category].filter((test, index) => {
-            if (answers.TESTS.indexOf(index) !== -1) return true
-          }),
-          reportFilename
-        )
-      )
-    } else {
-      showCategories()
-    }
-  })
-}
-
-const showCategories = () => {
-  clearConsole()
-
-  const categories = Object.keys(TestCases)
-  const questions = [
-    {
-      type: 'list',
-      message: 'Select a category',
-      name: 'CATEGORIES',
-      choices: categories,
-      pageSize: process.stdout.rows || 20,
-    },
-  ]
-
-  Inquirer.prompt(questions).then(answers => {
     if (answers.CATEGORIES) {
       menu(answers.CATEGORIES)
-    } else {
-      showCategories()
     }
   })
 }
