@@ -148,16 +148,16 @@ const menu = async (categories, selectAll = false) => {
   let displayTestCaseList = []
   let testCaseList = []
   categories.forEach(category => {
-    let testCaseListFromCategory = TestCases[category]
+    let testCaseListFromCategory = TestCases[category] //Get test case list from each category
     if (testCaseListFromCategory && testCaseListFromCategory.length) {
-      testCaseList.push(...TestCases[category])
-      displayTestCaseList.push(...listTestcases(TestCases[category]))
+      testCaseList.push(...TestCases[category]) //Create test case list for all the selected categories to run
+      displayTestCaseList.push(...listTestcases(TestCases[category])) //Create testcase list for all the selected categories to display
     }
   })
   if (categories.includes('Enable writing reports to file')) {
     writeReports = true
   }
-  if (categories.length > 1 || categories.includes('Run all')) {
+  if (categories.length > 1 || categories.includes('Run all Plugin Tests')) {
     return getReportFilename(writeReports).then(reportFilename => run(testCaseList, reportFilename))
   } else {
     const questions = [
@@ -248,10 +248,10 @@ const showCategories = () => {
   ]
 
   Inquirer.prompt(questions).then(answers => {
-    if (answers.CATEGORIES.indexOf('Run all') !== -1) {
+    if (answers.CATEGORIES.indexOf('Run all Plugin Tests') !== -1) {
       let selectedCategories = []
-      selectedCategories.push(...categories)
-      selectedCategories.push(...answers.CATEGORIES)
+      selectedCategories.push(...categories) //Push all categories into Selected Category list
+      selectedCategories.push(...answers.CATEGORIES) //Push selected answers in to Selected Category list
       return menu(selectedCategories)
     }
     if (answers.CATEGORIES) {
