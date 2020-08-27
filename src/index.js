@@ -143,10 +143,17 @@ const getReportFilename = (writeReports = false) => {
   }
 }
 
-const menu = async (category, selectAll = false) => {
+const menu = async (categories, selectAll = false) => {
   clearConsole()
-
-  const tests = listTestcases(TestCases[category])
+  let displayTestCaseList = []
+  let testCaseList = []
+  categories.forEach(category => {
+    let testCaseListFromCategory = TestCases[category] //Get test case list from each category
+    if (testCaseListFromCategory && testCaseListFromCategory.length) {
+      testCaseList.push(...TestCases[category]) //Create test case list for all the selected categories to run
+      displayTestCaseList.push(...listTestcases(TestCases[category])) //Create testcase list for all the selected categories to display
+    }
+  })
   const questions = [
     {
       type: 'checkbox-plus',
@@ -171,7 +178,7 @@ const menu = async (category, selectAll = false) => {
             'Enable writing reports to file',
             'Run all',
             new Inquirer.Separator(),
-            ...tests.filter(test => {
+            ...displayTestCaseList.filter(test => {
               return test.name.toLowerCase().includes(input.toLowerCase())
             }),
           ])
@@ -190,14 +197,14 @@ const menu = async (category, selectAll = false) => {
 
     if (answers.TESTS.indexOf('Run all') !== -1) {
       return getReportFilename(writeReports).then(reportFilename =>
-        run(TestCases[category], reportFilename)
+        run(testCaseList, reportFilename)
       )
     }
 
     if (answers.TESTS.length) {
       getReportFilename(writeReports).then(reportFilename =>
         run(
-          TestCases[category].filter((test, index) => {
+          testCaseList.filter((test, index) => {
             if (answers.TESTS.indexOf(index) !== -1) return true
           }),
           reportFilename
