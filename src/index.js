@@ -14,6 +14,8 @@ import Config from '../config'
 import { clearConsole, center, renderSeparator } from './helpers/ui-helpers'
 
 const TestCases = Testcases()
+let selectedCategories = []
+let writeReports = false
 
 Inquirer.registerPrompt('checkbox-plus', CheckboxPlus)
 
@@ -207,25 +209,108 @@ const menu = async (category, selectAll = false) => {
   })
 }
 
+const menuRunAll = async categories => {
+  clearConsole()
+  let testCaseList = []
+  categories.forEach(category => {
+    testCaseList.push(...TestCases[category]) //Create test case list for all the selected categories to run
+  })
+  // confirm('Do you want to enable reports to a file?')
+  //   .then(() => {
+  //       writeReports = true
+  //       return getReportFilename(writeReports).then(reportFilename => run(testCaseList, reportFilename))
+  //     }, ()=> {
+  //       writeReports = false
+  //       return getReportFilename(writeReports).then(reportFilename => run(testCaseList, reportFilename))
+  //     },
+  //   )
+  const questions = [
+    {
+      type: 'checkbox-plus',
+      name: 'REPORT_ENABLE',
+      message: [
+        [
+          'Select any one of the below choice using',
+          Chalk.yellow('spacebar'),
+          'then press',
+          Chalk.yellow('enter'),
+          'to start the Testrunner!',
+          'To go',
+          Chalk.red('back'),
+          'press enter without selecting a choice.',
+        ].join(' '),
+      ].join('\n'),
+      source: (selected, input) => {
+        return new Promise(function(resolve) {
+          resolve(['Enable writing reports to file', 'Skip writing reports to file'])
+        })
+      },
+      pageSize: process.stdout.rows || 20,
+    },
+  ]
+  Inquirer.prompt(questions).then(answers => {
+    if (answers.REPORT_ENABLE.indexOf('Enable writing reports to file') !== -1) {
+      writeReports = true
+    }
+    if (answers.REPORT_ENABLE.indexOf('Skip writing reports to file') !== -1) {
+      writeReports = false
+    }
+    if (answers.REPORT_ENABLE.length) {
+      return getReportFilename(writeReports).then(reportFilename =>
+        run(testCaseList, reportFilename)
+      )
+    } else {
+      showCategories()
+    }
+  })
+}
 const showCategories = () => {
   clearConsole()
 
   const categories = Object.keys(TestCases)
   const questions = [
     {
-      type: 'list',
-      message: 'Select a category',
+      type: 'checkbox-plus',
+      message: [
+        [
+          'Select',
+          Chalk.redBright('Runall'),
+          'option to run all the tests',
+          Chalk.bgYellow('OR'),
+          'Select any of the',
+          Chalk.redBright('Category'),
+          'to run tests related to specific category.',
+          'Press',
+          Chalk.yellow('spacebar'),
+          'to select the options',
+          'and then press',
+          Chalk.yellow('enter'),
+          'to start the Testrunner!',
+        ].join(' '),
+      ].join('\n'),
       name: 'CATEGORIES',
-      choices: categories,
+      source: () => {
+        return new Promise(function(resolve) {
+          resolve([
+            new Inquirer.Separator(),
+            'Run all',
+            new Inquirer.Separator(),
+            ...categories.filter(category => {
+              return category
+            }),
+          ])
+        })
+      },
       pageSize: process.stdout.rows || 20,
     },
   ]
-
   Inquirer.prompt(questions).then(answers => {
+    if (answers.CATEGORIES.indexOf('Run all') !== -1) {
+      selectedCategories.push(...categories)
+      return menuRunAll(selectedCategories)
+    }
     if (answers.CATEGORIES) {
       menu(answers.CATEGORIES)
-    } else {
-      showCategories()
     }
   })
 }
