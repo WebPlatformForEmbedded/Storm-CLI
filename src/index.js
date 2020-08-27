@@ -189,20 +189,16 @@ const menu = async (categories, selectAll = false) => {
   ]
 
   Inquirer.prompt(questions).then(answers => {
-    let writeReports = false
-
-    if (answers.TESTS.indexOf('Enable writing reports to file') !== -1) {
-      writeReports = true
-    }
-
-    if (answers.TESTS.indexOf('Run all') !== -1) {
-      return getReportFilename(writeReports).then(reportFilename =>
-        run(testCaseList, reportFilename)
-      )
-    }
-
     if (answers.TESTS.length) {
-      getReportFilename(writeReports).then(reportFilename =>
+      if (answers.TESTS.indexOf('Enable writing reports to file') !== -1) {
+        writeReports = true
+      }
+      if (answers.TESTS.indexOf('Run all') !== -1) {
+        return getReportFilename(writeReports).then(reportFilename =>
+          run(testCaseList, reportFilename)
+        )
+      }
+      return getReportFilename(writeReports).then(reportFilename =>
         run(
           testCaseList.filter((test, index) => {
             if (answers.TESTS.indexOf(index) !== -1) return true
@@ -222,15 +218,7 @@ const menuRunAll = async categories => {
   categories.forEach(category => {
     testCaseList.push(...TestCases[category]) //Create test case list for all the selected categories to run
   })
-  // confirm('Do you want to enable reports to a file?')
-  //   .then(() => {
-  //       writeReports = true
-  //       return getReportFilename(writeReports).then(reportFilename => run(testCaseList, reportFilename))
-  //     }, ()=> {
-  //       writeReports = false
-  //       return getReportFilename(writeReports).then(reportFilename => run(testCaseList, reportFilename))
-  //     },
-  //   )
+
   const questions = [
     {
       type: 'checkbox-plus',
@@ -256,13 +244,13 @@ const menuRunAll = async categories => {
     },
   ]
   Inquirer.prompt(questions).then(answers => {
-    if (answers.REPORT_ENABLE.indexOf('Enable writing reports to file') !== -1) {
-      writeReports = true
-    }
-    if (answers.REPORT_ENABLE.indexOf('Skip writing reports to file') !== -1) {
-      writeReports = false
-    }
     if (answers.REPORT_ENABLE.length) {
+      if (answers.REPORT_ENABLE.indexOf('Enable writing reports to file') !== -1) {
+        writeReports = true
+      }
+      if (answers.REPORT_ENABLE.indexOf('Skip writing reports to file') !== -1) {
+        writeReports = false
+      }
       return getReportFilename(writeReports).then(reportFilename =>
         run(testCaseList, reportFilename)
       )
@@ -292,7 +280,7 @@ const showCategories = () => {
           'to select the options',
           'and then press',
           Chalk.yellow('enter'),
-          'to start the Testrunner!',
+          'to proceed',
         ].join(' '),
       ].join('\n'),
       name: 'CATEGORIES',
@@ -312,12 +300,14 @@ const showCategories = () => {
     },
   ]
   Inquirer.prompt(questions).then(answers => {
-    if (answers.CATEGORIES.indexOf('Run all') !== -1) {
-      selectedCategories.push(...categories)
-      return menuRunAll(selectedCategories)
-    }
     if (answers.CATEGORIES) {
+      if (answers.CATEGORIES.indexOf('Run all') !== -1) {
+        selectedCategories.push(...categories)
+        return menuRunAll(selectedCategories)
+      }
       menu(answers.CATEGORIES)
+    } else {
+      showCategories()
     }
   })
 }
