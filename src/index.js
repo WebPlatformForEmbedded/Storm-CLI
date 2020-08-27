@@ -14,6 +14,9 @@ import Config from '../config'
 import { clearConsole, center, renderSeparator } from './helpers/ui-helpers'
 
 const TestCases = Testcases()
+const runAll = 'Run all'
+const enableReports = 'Enable writing reports to file'
+const skipReports = 'Skip writing reports to file'
 let selectedCategories = []
 let writeReports = false
 
@@ -175,8 +178,8 @@ const menu = async (categories, selectAll = false) => {
       source: (selected, input) => {
         return new Promise(function(resolve) {
           resolve([
-            'Enable writing reports to file',
-            'Run all',
+            enableReports,
+            runAll,
             new Inquirer.Separator(),
             ...displayTestCaseList.filter(test => {
               return test.name.toLowerCase().includes(input.toLowerCase())
@@ -190,10 +193,10 @@ const menu = async (categories, selectAll = false) => {
 
   Inquirer.prompt(questions).then(answers => {
     if (answers.TESTS.length) {
-      if (answers.TESTS.indexOf('Enable writing reports to file') !== -1) {
+      if (answers.TESTS.indexOf(enableReports) !== -1) {
         writeReports = true
       }
-      if (answers.TESTS.indexOf('Run all') !== -1) {
+      if (answers.TESTS.indexOf(runAll) !== -1) {
         return getReportFilename(writeReports).then(reportFilename =>
           run(testCaseList, reportFilename)
         )
@@ -237,7 +240,7 @@ const menuRunAll = async categories => {
       ].join('\n'),
       source: (selected, input) => {
         return new Promise(function(resolve) {
-          resolve(['Enable writing reports to file', 'Skip writing reports to file'])
+          resolve([enableReports, skipReports])
         })
       },
       pageSize: process.stdout.rows || 20,
@@ -245,10 +248,10 @@ const menuRunAll = async categories => {
   ]
   Inquirer.prompt(questions).then(answers => {
     if (answers.REPORT_ENABLE.length) {
-      if (answers.REPORT_ENABLE.indexOf('Enable writing reports to file') !== -1) {
+      if (answers.REPORT_ENABLE.indexOf(enableReports) !== -1) {
         writeReports = true
       }
-      if (answers.REPORT_ENABLE.indexOf('Skip writing reports to file') !== -1) {
+      if (answers.REPORT_ENABLE.indexOf(skipReports) !== -1) {
         writeReports = false
       }
       return getReportFilename(writeReports).then(reportFilename =>
@@ -288,7 +291,7 @@ const showCategories = () => {
         return new Promise(function(resolve) {
           resolve([
             new Inquirer.Separator(),
-            'Run all',
+            runAll,
             new Inquirer.Separator(),
             ...categories.filter(category => {
               return category
@@ -301,7 +304,7 @@ const showCategories = () => {
   ]
   Inquirer.prompt(questions).then(answers => {
     if (answers.CATEGORIES) {
-      if (answers.CATEGORIES.indexOf('Run all') !== -1) {
+      if (answers.CATEGORIES.indexOf(runAll) !== -1) {
         selectedCategories.push(...categories)
         return menuRunAll(selectedCategories)
       }
