@@ -8,6 +8,7 @@ import StormRunner from 'storm'
 
 import Testcases from '../testcases'
 import Reporter from './reporters/index'
+import prompt from './helpers/prompt'
 
 import Config from '../config'
 
@@ -109,7 +110,12 @@ const run = (tests, reportFilename = null) => {
   Contra.map.series(
     tests,
     (test, next) => {
-      StormRunner(test, Reporter({ reportFile: reportFilename, ...Config.thunder }), Config.thunder)
+      StormRunner(
+        test,
+        Reporter({ reportFile: reportFilename, ...Config.thunder }),
+        Config.thunder,
+        prompt
+      )
         .then(result => {
           test.result = result === undefined ? '' : result
           setTimeout(next, 1000, null)
