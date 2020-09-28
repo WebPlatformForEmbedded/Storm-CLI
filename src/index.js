@@ -5,16 +5,18 @@ import Contra from 'contra'
 import Moment from 'moment'
 
 import StormRunner from 'storm'
-
 import Testcases from '../testcases'
 import Reporter from './reporters/index'
 import prompt from './helpers/prompt'
-
 import Config from '../config'
-
 import { clearConsole, center, renderSeparator } from './helpers/ui-helpers'
+import ThunderJS from 'ThunderJS'
 
 const TestCases = Testcases()
+const thunderJS = ThunderJS(Config.thunder)
+
+let pluginsFromController = [] //plugin list from controller
+let categories
 
 Inquirer.registerPrompt('checkbox-plus', CheckboxPlus)
 
@@ -213,10 +215,32 @@ const menu = async (category, selectAll = false) => {
   })
 }
 
-const showCategories = () => {
-  clearConsole()
+/**
+ * This method is used to get Controller Plugins
+ * @returns {Promise<unknown>}
+ */
+const getControllerPluginData = () => {
+  return new Promise(resolve => {
+    thunderJS.Controller.status()
+      .then(result => {
+        for (let i = 0; i < result.length; i++) {
+          pluginsFromController.push(result[i].callsign)
+        }
+        resolve(pluginsFromController)
+      })
+      .catch(err => console.log('error is', err))
+  })
+}
 
-  const categories = Object.keys(TestCases)
+const showCategories = async () => {
+  clearConsole()
+  let pluginsInBuild = await getControllerPluginData.call()
+  const pluginsInTestFramework = Object.keys(TestCases)
+  if (pluginsInBuild.length) {
+    categories = pluginsInTestFramework.filter(value => pluginsInBuild.includes(value))
+  } else {
+    categories = pluginsInTestFramework
+  }
   const questions = [
     {
       type: 'list',
