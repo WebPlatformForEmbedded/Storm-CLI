@@ -15,6 +15,8 @@ import { clearConsole, center, renderSeparator } from './helpers/ui-helpers'
 
 const TestCases = Testcases()
 const runAll = 'Run all'
+const runByPlugin = 'Run By Plugin'
+const search = 'Search'
 const enableReports = 'Enable writing reports to file'
 const skipReports = 'Skip writing reports to file'
 let selectedCategories = []
@@ -179,7 +181,6 @@ const menu = async (categories, selectAll = false) => {
         return new Promise(function(resolve) {
           resolve([
             enableReports,
-            runAll,
             new Inquirer.Separator(),
             ...displayTestCaseList.filter(test => {
               return test.name.toLowerCase().includes(input.toLowerCase())
@@ -215,13 +216,54 @@ const menu = async (categories, selectAll = false) => {
   })
 }
 
+const menuRunByPlugin = () => {
+  clearConsole()
+  const categories = Object.keys(TestCases)
+  const questions = [
+    {
+      type: 'checkbox-plus',
+      message: [
+        [
+          'Select any of the',
+          Chalk.redBright('Category'),
+          'to run tests related to specific category.',
+          'Press',
+          Chalk.yellow('spacebar'),
+          'to select the options',
+          'and then press',
+          Chalk.yellow('enter'),
+          'to proceed',
+        ].join(' '),
+      ].join('\n'),
+      name: 'CATEGORIES',
+      source: () => {
+        return new Promise(function(resolve) {
+          resolve([
+            new Inquirer.Separator(),
+            ...categories.filter(category => {
+              return category
+            }),
+          ])
+        })
+      },
+      pageSize: process.stdout.rows || 20,
+    },
+  ]
+  Inquirer.prompt(questions).then(answers => {
+    if (answers.CATEGORIES) {
+      menu(answers.CATEGORIES)
+    } else {
+      showCategories()
+    }
+  })
+}
+
 const menuRunAll = async categories => {
   clearConsole()
   let testCaseList = []
   categories.forEach(category => {
     testCaseList.push(...TestCases[category]) //Create test case list for all the selected categories to run
   })
-
   const questions = [
     {
       type: 'checkbox-plus',
@@ -262,6 +304,7 @@ const menuRunAll = async categories => {
     }
   })
 }
+
 const showCategories = () => {
   clearConsole()
 
@@ -271,13 +314,13 @@ const showCategories = () => {
       type: 'checkbox-plus',
       message: [
         [
-          'Select',
-          Chalk.redBright('Runall'),
-          'option to run all the tests',
-          Chalk.bgYellow('OR'),
-          'Select any of the',
-          Chalk.redBright('Category'),
-          'to run tests related to specific category.',
+          'Select \n',
+          Chalk.redBright('1. Runall'),
+          '- option to run all the tests \n',
+          Chalk.redBright('2. Run By Plugin'),
+          ' - to run tests related to specific Plugin. \n',
+          Chalk.redBright('3. Search'),
+          ' - Search test cases and run them \n',
           'Press',
           Chalk.yellow('spacebar'),
           'to select the options',
@@ -289,24 +332,22 @@ const showCategories = () => {
       name: 'CATEGORIES',
       source: () => {
         return new Promise(function(resolve) {
-          resolve([
-            new Inquirer.Separator(),
-            runAll,
-            new Inquirer.Separator(),
-            ...categories.filter(category => {
-              return category
-            }),
-          ])
+          resolve([new Inquirer.Separator(), runAll, runByPlugin, search])
         })
       },
       pageSize: process.stdout.rows || 20,
     },
   ]
   Inquirer.prompt(questions).then(answers => {
+    console.log('Categories are', categories)
     if (answers.CATEGORIES) {
       if (answers.CATEGORIES.indexOf(runAll) !== -1) {
         selectedCategories.push(...categories)
         return menuRunAll(selectedCategories)
+      } else if (answers.CATEGORIES.indexOf(search) != -1) {
+        return menu(categories)
+      } else if (answers.CATEGORIES.indexOf(runByPlugin) != -1) {
+        return menuRunByPlugin(categories)
       }
       menu(answers.CATEGORIES)
     } else {
