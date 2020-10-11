@@ -339,7 +339,6 @@ const showCategories = () => {
     },
   ]
   Inquirer.prompt(questions).then(answers => {
-    console.log('Categories are', categories)
     if (answers.CATEGORIES) {
       if (answers.CATEGORIES.indexOf(runAll) !== -1) {
         selectedCategories.push(...categories)
