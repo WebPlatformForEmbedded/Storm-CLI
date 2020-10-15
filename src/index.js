@@ -159,6 +159,9 @@ const menu = async (categories, selectAll = false) => {
       displayTestCaseList.push(...listTestcases(TestCases[category])) //Create testcase list for all the selected categories to display
     }
   })
+  displayTestCaseList.forEach((item, index) => {
+    item.value = index
+  })
   const questions = [
     {
       type: 'checkbox-plus',
@@ -197,11 +200,6 @@ const menu = async (categories, selectAll = false) => {
       if (answers.TESTS.indexOf(enableReports) !== -1) {
         writeReports = true
       }
-      if (answers.TESTS.indexOf(runAll) !== -1) {
-        return getReportFilename(writeReports).then(reportFilename =>
-          run(testCaseList, reportFilename)
-        )
-      }
       return getReportFilename(writeReports).then(reportFilename =>
         run(
           testCaseList.filter((test, index) => {
@@ -215,10 +213,8 @@ const menu = async (categories, selectAll = false) => {
     }
   })
 }
-
-const menuRunByPlugin = () => {
+const menuRunByPlugin = categories => {
   clearConsole()
-  const categories = Object.keys(TestCases)
   const questions = [
     {
       type: 'checkbox-plus',
@@ -307,11 +303,11 @@ const menuRunAll = async categories => {
 
 const showCategories = () => {
   clearConsole()
-
+  const menuOptions = [runAll, runByPlugin, search]
   const categories = Object.keys(TestCases)
   const questions = [
     {
-      type: 'checkbox-plus',
+      type: 'list',
       message: [
         [
           'Select \n',
@@ -330,12 +326,7 @@ const showCategories = () => {
         ].join(' '),
       ].join('\n'),
       name: 'CATEGORIES',
-      source: () => {
-        return new Promise(function(resolve) {
-          resolve([new Inquirer.Separator(), runAll, runByPlugin, search])
-        })
-      },
-      pageSize: process.stdout.rows || 20,
+      choices: menuOptions,
     },
   ]
   Inquirer.prompt(questions).then(answers => {
