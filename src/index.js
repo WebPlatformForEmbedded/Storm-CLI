@@ -20,7 +20,17 @@ const search = 'Search'
 const enableReports = 'Enable writing reports to file'
 const skipReports = 'Skip writing reports to file'
 let selectedCategories = []
+let categories
 let writeReports = false
+let displayTestCaseList = []
+let pluginDataFromController
+let testCaseList = []
+let categoryTestsCases = []
+import ThunderJS from 'ThunderJS'
+const thunderJS = ThunderJS(Config.thunder)
+let pluginsFromTestcaseList
+let allPlugins = []
+let testCasesFromTestsFolder
 
 Inquirer.registerPrompt('checkbox-plus', CheckboxPlus)
 
@@ -147,21 +157,81 @@ const getReportFilename = (writeReports = false) => {
     return Promise.resolve(null)
   }
 }
+/**
+ * This method is used to get Controller Plugins
+ * @returns {Promise<unknown>}
+ */
+const getControllerPluginData = () => {
+  let pluginsFromController = []
+  return new Promise(resolve => {
+    thunderJS.Controller.status()
+      .then(result => {
+        for (let i = 0; i < result.length; i++) {
+          pluginsFromController.push(result[i].callsign)
+        }
+        resolve(pluginsFromController)
+      })
+      .catch(err => console.log('error is', err))
+  })
+}
 
-const menu = async (categories, selectAll = false) => {
-  clearConsole()
-  let displayTestCaseList = []
-  let testCaseList = []
-  categories.forEach(category => {
-    let testCaseListFromCategory = TestCases[category] //Get test case list from each category
-    if (testCaseListFromCategory && testCaseListFromCategory.length) {
-      testCaseList.push(...TestCases[category]) //Create test case list for all the selected categories to run
-      displayTestCaseList.push(...listTestcases(TestCases[category])) //Create testcase list for all the selected categories to display
+/**
+ * This function gets the complete list of tests cases from the test cases folder
+ * @returns {*}
+ */
+const func_testCasesFromTestFolder = () => {
+  testCasesFromTestsFolder = Object.values(TestCases).reduce((arr1, arr2) => {
+    return arr1.concat(arr2)
+  }, [])
+  return testCasesFromTestsFolder
+}
+
+/**
+ * This function returns plugins that are available within the testcases
+ * @returns {*[]}
+ */
+const func_pluginsFromTestsFolder = () => {
+  testCasesFromTestsFolder.forEach(t => {
+    if (t.plugin !== undefined) {
+      allPlugins.push(t.plugin[0])
     }
   })
+  return [...new Set(allPlugins)]
+}
+
+/**
+ *
+ * @param categories
+ */
+const testcaseList = categories => {
+  categories.forEach(category => {
+    categoryTestsCases = testCasesFromTestsFolder.filter(item => {
+      if (item.plugin !== undefined) {
+        let pluginStatus = item.plugin.every(plugin => {
+          return pluginDataFromController.indexOf(plugin) !== -1
+        })
+        return (
+          item && item.plugin && item.plugin.length && category === item.plugin[0] && pluginStatus
+        )
+      }
+    })
+    testCasesFromTestsFolder.forEach(t => {
+      if (t.plugin !== undefined) {
+        allPlugins.push(t.plugin[0])
+      }
+    })
+    testCaseList.push(...categoryTestsCases)
+    displayTestCaseList.push(...listTestcases(categoryTestsCases))
+  })
+  pluginsFromTestcaseList = [...new Set(allPlugins)]
   displayTestCaseList.forEach((item, index) => {
     item.value = index
   })
+}
+
+const menu = async (categories, selectAll = false) => {
+  clearConsole()
+  testcaseList(categories)
   const questions = [
     {
       type: 'checkbox-plus',
@@ -184,6 +254,7 @@ const menu = async (categories, selectAll = false) => {
         return new Promise(function(resolve) {
           resolve([
             enableReports,
+            runAll,
             new Inquirer.Separator(),
             ...displayTestCaseList.filter(test => {
               return test.name.toLowerCase().includes(input.toLowerCase())
@@ -199,6 +270,11 @@ const menu = async (categories, selectAll = false) => {
     if (answers.TESTS.length) {
       if (answers.TESTS.indexOf(enableReports) !== -1) {
         writeReports = true
+      }
+      if (answers.TESTS.indexOf('Run all') !== -1) {
+        return getReportFilename(writeReports).then(reportFilename =>
+          run(testCaseList, reportFilename)
+        )
       }
       return getReportFilename(writeReports).then(reportFilename =>
         run(
@@ -256,10 +332,6 @@ const menuRunByPlugin = categories => {
 
 const menuRunAll = async categories => {
   clearConsole()
-  let testCaseList = []
-  categories.forEach(category => {
-    testCaseList.push(...TestCases[category]) //Create test case list for all the selected categories to run
-  })
   const questions = [
     {
       type: 'checkbox-plus',
@@ -293,18 +365,19 @@ const menuRunAll = async categories => {
         writeReports = false
       }
       return getReportFilename(writeReports).then(reportFilename =>
-        run(testCaseList, reportFilename)
+        run(testCasesFromTestsFolder, reportFilename)
       )
     } else {
       showCategories()
     }
   })
 }
-
-const showCategories = () => {
+const showCategories = async () => {
   clearConsole()
+  await func_testCasesFromTestFolder() //Gets list of test cases from testcases folder
+  let pluginsFromTestcases = await func_pluginsFromTestsFolder() //
+  pluginDataFromController = await getControllerPluginData.call()
   const menuOptions = [runAll, runByPlugin, search]
-  const categories = Object.keys(TestCases)
   const questions = [
     {
       type: 'list',
@@ -330,13 +403,14 @@ const showCategories = () => {
     },
   ]
   Inquirer.prompt(questions).then(answers => {
+    categories = pluginsFromTestcases.filter(item => pluginDataFromController.includes(item))
     if (answers.CATEGORIES) {
       if (answers.CATEGORIES.indexOf(runAll) !== -1) {
         selectedCategories.push(...categories)
         return menuRunAll(selectedCategories)
-      } else if (answers.CATEGORIES.indexOf(search) != -1) {
+      } else if (answers.CATEGORIES.indexOf(search) !== -1) {
         return menu(categories)
-      } else if (answers.CATEGORIES.indexOf(runByPlugin) != -1) {
+      } else if (answers.CATEGORIES.indexOf(runByPlugin) !== -1) {
         return menuRunByPlugin(categories)
       }
       menu(answers.CATEGORIES)
