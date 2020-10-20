@@ -19,18 +19,15 @@ const runByPlugin = 'Run By Plugin'
 const search = 'Search'
 const enableReports = 'Enable writing reports to file'
 const skipReports = 'Skip writing reports to file'
-let selectedCategories = []
-let categories
+
 let writeReports = false
 let displayTestCaseList = []
 let pluginDataFromController
 let testCaseList = []
-let categoryTestsCases = []
+let testCasesFromTestsFolder
+
 import ThunderJS from 'ThunderJS'
 const thunderJS = ThunderJS(Config.thunder)
-let pluginsFromTestcaseList
-let allPlugins = []
-let testCasesFromTestsFolder
 
 Inquirer.registerPrompt('checkbox-plus', CheckboxPlus)
 
@@ -191,6 +188,7 @@ const func_testCasesFromTestFolder = () => {
  * @returns {*[]}
  */
 const func_pluginsFromTestsFolder = () => {
+  let allPlugins = []
   testCasesFromTestsFolder.forEach(t => {
     if (t.plugin !== undefined) {
       allPlugins.push(t.plugin[0])
@@ -200,12 +198,13 @@ const func_pluginsFromTestsFolder = () => {
 }
 
 /**
- *
+ * This function is used to create testcase list and displaytestcase list
  * @param categories
  */
-const testcaseList = categories => {
+const func_finalTestCaseList = categories => {
+  let pluginTestCases = []
   categories.forEach(category => {
-    categoryTestsCases = testCasesFromTestsFolder.filter(item => {
+    pluginTestCases = testCasesFromTestsFolder.filter(item => {
       if (item.plugin !== undefined) {
         let pluginStatus = item.plugin.every(plugin => {
           return pluginDataFromController.indexOf(plugin) !== -1
@@ -215,15 +214,9 @@ const testcaseList = categories => {
         )
       }
     })
-    testCasesFromTestsFolder.forEach(t => {
-      if (t.plugin !== undefined) {
-        allPlugins.push(t.plugin[0])
-      }
-    })
-    testCaseList.push(...categoryTestsCases)
-    displayTestCaseList.push(...listTestcases(categoryTestsCases))
+    testCaseList.push(...pluginTestCases)
+    displayTestCaseList.push(...listTestcases(pluginTestCases))
   })
-  pluginsFromTestcaseList = [...new Set(allPlugins)]
   displayTestCaseList.forEach((item, index) => {
     item.value = index
   })
@@ -231,7 +224,7 @@ const testcaseList = categories => {
 
 const menu = async (categories, selectAll = false) => {
   clearConsole()
-  testcaseList(categories)
+  func_finalTestCaseList(categories)
   const questions = [
     {
       type: 'checkbox-plus',
@@ -271,7 +264,7 @@ const menu = async (categories, selectAll = false) => {
       if (answers.TESTS.indexOf(enableReports) !== -1) {
         writeReports = true
       }
-      if (answers.TESTS.indexOf('Run all') !== -1) {
+      if (answers.TESTS.indexOf(runAll) !== -1) {
         return getReportFilename(writeReports).then(reportFilename =>
           run(testCaseList, reportFilename)
         )
@@ -285,6 +278,8 @@ const menu = async (categories, selectAll = false) => {
         )
       )
     } else {
+      displayTestCaseList = []
+      testCaseList = []
       showCategories()
     }
   })
@@ -332,6 +327,7 @@ const menuRunByPlugin = categories => {
 
 const menuRunAll = async categories => {
   clearConsole()
+  func_finalTestCaseList(categories)
   const questions = [
     {
       type: 'checkbox-plus',
@@ -365,7 +361,7 @@ const menuRunAll = async categories => {
         writeReports = false
       }
       return getReportFilename(writeReports).then(reportFilename =>
-        run(testCasesFromTestsFolder, reportFilename)
+        run(testCaseList, reportFilename)
       )
     } else {
       showCategories()
@@ -403,7 +399,8 @@ const showCategories = async () => {
     },
   ]
   Inquirer.prompt(questions).then(answers => {
-    categories = pluginsFromTestcases.filter(item => pluginDataFromController.includes(item))
+    let categories = pluginsFromTestcases.filter(item => pluginDataFromController.includes(item))
+    let selectedCategories = []
     if (answers.CATEGORIES) {
       if (answers.CATEGORIES.indexOf(runAll) !== -1) {
         selectedCategories.push(...categories)
