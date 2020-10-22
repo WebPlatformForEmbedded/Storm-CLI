@@ -29,6 +29,20 @@ let testCasesFromTestsFolder
 import ThunderJS from 'ThunderJS'
 const thunderJS = ThunderJS(Config.thunder)
 
+/**
+ * This method is used to get device Name
+ * @returns {Promise<unknown>}
+ */
+const getDeviceIP = () => {
+  return new Promise(resolve => {
+    thunderJS.DeviceInfo.addresses()
+      .then(result => {
+        resolve(result.find(item => item.name === 'eth0').ip)
+      })
+      .catch(err => console.log('error is', err))
+  })
+}
+
 Inquirer.registerPrompt('checkbox-plus', CheckboxPlus)
 
 // construct a list of tests to show as options
@@ -373,48 +387,79 @@ const showCategories = async () => {
   await func_testCasesFromTestFolder() //Gets list of test cases from testcases folder
   let pluginsFromTestcases = await func_pluginsFromTestsFolder() //
   pluginDataFromController = await getControllerPluginData.call()
-  const menuOptions = [runAll, runByPlugin, search]
+  let categories = pluginsFromTestcases.filter(item => pluginDataFromController.includes(item))
+  if (categories !== undefined && categories.length) {
+    const menuOptions = [runAll, runByPlugin, search]
+    const questions = [
+      {
+        type: 'list',
+        message: [
+          [
+            'Select \n',
+            Chalk.redBright('1. Runall'),
+            '- option to run all the tests \n',
+            Chalk.redBright('2. Run By Plugin'),
+            ' - to run tests related to specific Plugin. \n',
+            Chalk.redBright('3. Search'),
+            ' - Search test cases and run them \n',
+            'Press',
+            Chalk.yellow('spacebar'),
+            'to select the options',
+            'and then press',
+            Chalk.yellow('enter'),
+            'to proceed',
+          ].join(' '),
+        ].join('\n'),
+        name: 'CATEGORIES',
+        choices: menuOptions,
+      },
+    ]
+    Inquirer.prompt(questions).then(answers => {
+      let selectedCategories = []
+      if (answers.CATEGORIES) {
+        if (answers.CATEGORIES.indexOf(runAll) !== -1) {
+          selectedCategories.push(...categories)
+          return menuRunAll(selectedCategories)
+        } else if (answers.CATEGORIES.indexOf(search) !== -1) {
+          return menu(categories)
+        } else if (answers.CATEGORIES.indexOf(runByPlugin) !== -1) {
+          return menuRunByPlugin(categories)
+        }
+        menu(answers.CATEGORIES)
+      } else {
+        showCategories()
+      }
+    })
+  } else {
+    console.log(
+      Chalk.red(
+        'Plugin data from Controller is not available or testcases are not available to run'
+      )
+    )
+    process.exit()
+  }
+}
+
+const showMenu = async () => {
+  let deviceIP = await getDeviceIP.call()
   const questions = [
     {
-      type: 'list',
-      message: [
-        [
-          'Select \n',
-          Chalk.redBright('1. Runall'),
-          '- option to run all the tests \n',
-          Chalk.redBright('2. Run By Plugin'),
-          ' - to run tests related to specific Plugin. \n',
-          Chalk.redBright('3. Search'),
-          ' - Search test cases and run them \n',
-          'Press',
-          Chalk.yellow('spacebar'),
-          'to select the options',
-          'and then press',
-          Chalk.yellow('enter'),
-          'to proceed',
-        ].join(' '),
-      ].join('\n'),
-      name: 'CATEGORIES',
-      choices: menuOptions,
+      type: 'input',
+      name: 'input',
+      message: 'Enter the IP of the device',
     },
   ]
   Inquirer.prompt(questions).then(answers => {
-    let categories = pluginsFromTestcases.filter(item => pluginDataFromController.includes(item))
-    let selectedCategories = []
-    if (answers.CATEGORIES) {
-      if (answers.CATEGORIES.indexOf(runAll) !== -1) {
-        selectedCategories.push(...categories)
-        return menuRunAll(selectedCategories)
-      } else if (answers.CATEGORIES.indexOf(search) !== -1) {
-        return menu(categories)
-      } else if (answers.CATEGORIES.indexOf(runByPlugin) !== -1) {
-        return menuRunByPlugin(categories)
-      }
-      menu(answers.CATEGORIES)
-    } else {
-      showCategories()
+    if (deviceIP.toString() === answers.input) showCategories()
+    else {
+      console.log(
+        Chalk.red.bold(
+          'STB is not connected (or) Entered IP is invalid. \nPlease connect the STB (or) Enter Valid Ip and execute the tests'
+        )
+      )
+      process.exit()
     }
   })
 }
 
-showCategories()
+showMenu()
