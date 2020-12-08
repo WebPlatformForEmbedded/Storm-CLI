@@ -15,6 +15,41 @@ import Config from '../config'
 import { clearConsole, center, renderSeparator } from './helpers/ui-helpers'
 
 const TestCases = Testcases()
+const runAll = 'Run all'
+const runByPlugin = 'Run By Plugin'
+const search = 'Search'
+const enableReports = 'Enable writing reports to file'
+const skipReports = 'Skip writing reports to file'
+
+let writeReports = false
+let displayTestCaseList = []
+let pluginDataFromController
+let testCaseList = []
+let testCasesFromTestsFolder
+let deviceIpList = []
+
+import ThunderJS from 'ThunderJS'
+const thunderJS = ThunderJS(Config.thunder)
+
+/**
+ * This method is used to get device Name
+ * @returns {Promise<unknown>}
+ */
+const getDeviceIP = () => {
+  return new Promise(resolve => {
+    thunderJS.DeviceInfo.addresses()
+      .then(result => {
+        let names = ['lo', 'tunl0', 'sit0', 'wlan0', 'eth0']
+        for (let i = 0; i < result.length; i++) {
+          if (names.includes(result[i].name)) {
+            deviceIpList.push(result[i].ip)
+          }
+        }
+        resolve(deviceIpList.flat())
+      })
+      .catch(err => console.log('error is', err))
+  })
+}
 
 Inquirer.registerPrompt('checkbox-plus', CheckboxPlus)
 
@@ -146,11 +181,79 @@ const getReportFilename = (writeReports = false) => {
     return Promise.resolve(null)
   }
 }
+/**
+ * This method is used to get Controller Plugins
+ * @returns {Promise<unknown>}
+ */
+const getControllerPluginData = () => {
+  let pluginsFromController = []
+  return new Promise(resolve => {
+    thunderJS.Controller.status()
+      .then(result => {
+        for (let i = 0; i < result.length; i++) {
+          pluginsFromController.push(result[i].callsign)
+        }
+        resolve(pluginsFromController)
+      })
+      .catch(err => console.log('error is', err))
+  })
+}
 
-const menu = async (category, selectAll = false) => {
+/**
+ * This function gets the complete list of tests cases from the test cases folder
+ * @returns {*}
+ */
+const func_testCasesFromTestFolder = () => {
+  testCasesFromTestsFolder = Object.values(TestCases).reduce((arr1, arr2) => {
+    return arr1.concat(arr2)
+  }, [])
+  return testCasesFromTestsFolder
+}
+
+/**
+ * This function returns plugins that are available within the testcases
+ * @returns {*[]}
+ */
+const func_pluginsFromTestsFolder = () => {
+  let allPlugins = []
+  testCasesFromTestsFolder.forEach(t => {
+    if (t.plugin !== undefined) {
+      allPlugins.push(t.plugin[0])
+    }
+  })
+  return [...new Set(allPlugins)]
+}
+
+/**
+ * This function is used to create testcase list and displaytestcase list
+ * @param categories
+ */
+const func_finalTestCaseList = categories => {
+  let pluginTestCases = []
+  testCaseList = []
+  displayTestCaseList = []
+  categories.forEach(category => {
+    pluginTestCases = testCasesFromTestsFolder.filter(item => {
+      if (item.plugin !== undefined) {
+        let pluginStatus = item.plugin.every(plugin => {
+          return pluginDataFromController.indexOf(plugin) !== -1
+        })
+        return (
+          item && item.plugin && item.plugin.length && category === item.plugin[0] && pluginStatus
+        )
+      }
+    })
+    testCaseList.push(...pluginTestCases)
+    displayTestCaseList.push(...listTestcases(pluginTestCases))
+  })
+  displayTestCaseList.forEach((item, index) => {
+    item.value = index
+  })
+}
+
+const menu = async (categories, selectAll = false) => {
   clearConsole()
-
-  const tests = listTestcases(TestCases[category])
+  func_finalTestCaseList(categories)
   const questions = [
     {
       type: 'checkbox-plus',
@@ -172,10 +275,10 @@ const menu = async (category, selectAll = false) => {
       source: (selected, input) => {
         return new Promise(function(resolve) {
           resolve([
-            'Enable writing reports to file',
-            'Run all',
+            enableReports,
+            runAll,
             new Inquirer.Separator(),
-            ...tests.filter(test => {
+            ...displayTestCaseList.filter(test => {
               return test.name.toLowerCase().includes(input.toLowerCase())
             }),
           ])
@@ -186,47 +289,62 @@ const menu = async (category, selectAll = false) => {
   ]
 
   Inquirer.prompt(questions).then(answers => {
-    let writeReports = false
-
-    if (answers.TESTS.indexOf('Enable writing reports to file') !== -1) {
-      writeReports = true
-    }
-
-    if (answers.TESTS.indexOf('Run all') !== -1) {
-      return getReportFilename(writeReports).then(reportFilename =>
-        run(TestCases[category], reportFilename)
-      )
-    }
-
     if (answers.TESTS.length) {
-      getReportFilename(writeReports).then(reportFilename =>
+      if (answers.TESTS.indexOf(enableReports) !== -1) {
+        writeReports = true
+      }
+      if (answers.TESTS.indexOf(runAll) !== -1) {
+        return getReportFilename(writeReports).then(reportFilename =>
+          run(testCaseList, reportFilename)
+        )
+      }
+      return getReportFilename(writeReports).then(reportFilename =>
         run(
-          TestCases[category].filter((test, index) => {
+          testCaseList.filter((test, index) => {
             if (answers.TESTS.indexOf(index) !== -1) return true
           }),
           reportFilename
         )
       )
     } else {
+      displayTestCaseList = []
+      testCaseList = []
       showCategories()
     }
   })
 }
-
-const showCategories = () => {
+const menuRunByPlugin = categories => {
   clearConsole()
-
-  const categories = Object.keys(TestCases)
   const questions = [
     {
-      type: 'list',
-      message: 'Select a category',
+      type: 'checkbox-plus',
+      message: [
+        [
+          'Select any of the',
+          Chalk.redBright('Category'),
+          'to run tests related to specific category.',
+          'Press',
+          Chalk.yellow('spacebar'),
+          'to select the options',
+          'and then press',
+          Chalk.yellow('enter'),
+          'to proceed',
+        ].join(' '),
+      ].join('\n'),
       name: 'CATEGORIES',
-      choices: categories,
+      source: () => {
+        return new Promise(function(resolve) {
+          resolve([
+            new Inquirer.Separator(),
+            ...categories.filter(category => {
+              return category
+            }),
+          ])
+        })
+      },
       pageSize: process.stdout.rows || 20,
     },
   ]
-
   Inquirer.prompt(questions).then(answers => {
     if (answers.CATEGORIES) {
       menu(answers.CATEGORIES)
@@ -236,4 +354,127 @@ const showCategories = () => {
   })
 }
 
-showCategories()
+const menuRunAll = async categories => {
+  clearConsole()
+  func_finalTestCaseList(categories)
+  const questions = [
+    {
+      type: 'checkbox-plus',
+      name: 'REPORT_ENABLE',
+      message: [
+        [
+          'Select any one of the below choice using',
+          Chalk.yellow('spacebar'),
+          'then press',
+          Chalk.yellow('enter'),
+          'to start the Testrunner!',
+          'To go',
+          Chalk.red('back'),
+          'press enter without selecting a choice.',
+        ].join(' '),
+      ].join('\n'),
+      source: (selected, input) => {
+        return new Promise(function(resolve) {
+          resolve([enableReports, skipReports])
+        })
+      },
+      pageSize: process.stdout.rows || 20,
+    },
+  ]
+  Inquirer.prompt(questions).then(answers => {
+    if (answers.REPORT_ENABLE.length) {
+      if (answers.REPORT_ENABLE.indexOf(enableReports) !== -1) {
+        writeReports = true
+      }
+      if (answers.REPORT_ENABLE.indexOf(skipReports) !== -1) {
+        writeReports = false
+      }
+      return getReportFilename(writeReports).then(reportFilename =>
+        run(testCaseList, reportFilename)
+      )
+    } else {
+      showCategories()
+    }
+  })
+}
+const showCategories = async () => {
+  clearConsole()
+  await func_testCasesFromTestFolder() //Gets list of test cases from testcases folder
+  let pluginsFromTestcases = await func_pluginsFromTestsFolder() //
+  pluginDataFromController = await getControllerPluginData.call()
+  let categories = pluginsFromTestcases.filter(item => pluginDataFromController.includes(item))
+  if (categories !== undefined && categories.length) {
+    const menuOptions = [runAll, runByPlugin, search]
+    const questions = [
+      {
+        type: 'list',
+        message: [
+          [
+            'Select \n',
+            Chalk.redBright('1. Runall'),
+            '- option to run all the tests \n',
+            Chalk.redBright('2. Run By Plugin'),
+            ' - to run tests related to specific Plugin. \n',
+            Chalk.redBright('3. Search'),
+            ' - Search test cases and run them \n',
+            'Press',
+            Chalk.yellow('spacebar'),
+            'to select the options',
+            'and then press',
+            Chalk.yellow('enter'),
+            'to proceed',
+          ].join(' '),
+        ].join('\n'),
+        name: 'CATEGORIES',
+        choices: menuOptions,
+      },
+    ]
+    Inquirer.prompt(questions).then(answers => {
+      let selectedCategories = []
+      if (answers.CATEGORIES) {
+        if (answers.CATEGORIES.indexOf(runAll) !== -1) {
+          selectedCategories.push(...categories)
+          return menuRunAll(selectedCategories)
+        } else if (answers.CATEGORIES.indexOf(search) !== -1) {
+          return menu(categories)
+        } else if (answers.CATEGORIES.indexOf(runByPlugin) !== -1) {
+          return menuRunByPlugin(categories)
+        }
+        menu(answers.CATEGORIES)
+      } else {
+        showCategories()
+      }
+    })
+  } else {
+    console.log(
+      Chalk.red(
+        'Plugin data from Controller is not available or testcases are not available to run'
+      )
+    )
+    process.exit()
+  }
+}
+
+const showMenu = async () => {
+  let deviceIP = await getDeviceIP.call()
+  const questions = [
+    {
+      type: 'input',
+      name: 'input',
+      message: 'Enter the IP of the device',
+    },
+  ]
+  Inquirer.prompt(questions).then(answers => {
+    if (deviceIP.includes(answers.input)) showCategories()
+    else {
+      console.log(
+        Chalk.red.bold(
+          'STB is not connected (or) Entered IP is invalid. \nPlease connect the STB (or) Enter Valid Ip and execute the tests'
+        )
+      )
+      process.exit()
+    }
+  })
+}
+
+showMenu()
