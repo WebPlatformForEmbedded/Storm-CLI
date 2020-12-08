@@ -25,6 +25,7 @@ let displayTestCaseList = []
 let pluginDataFromController
 let testCaseList = []
 let testCasesFromTestsFolder
+let deviceIpList = []
 
 import ThunderJS from 'ThunderJS'
 const thunderJS = ThunderJS(Config.thunder)
@@ -37,7 +38,13 @@ const getDeviceIP = () => {
   return new Promise(resolve => {
     thunderJS.DeviceInfo.addresses()
       .then(result => {
-        resolve(result.find(item => item.name === 'eth0').ip)
+        let names = ['lo', 'tunl0', 'sit0', 'wlan0', 'eth0']
+        for (let i = 0; i < result.length; i++) {
+          if (names.includes(result[i].name)) {
+            deviceIpList.push(result[i].ip)
+          }
+        }
+        resolve(deviceIpList.flat())
       })
       .catch(err => console.log('error is', err))
   })
@@ -217,6 +224,8 @@ const func_pluginsFromTestsFolder = () => {
  */
 const func_finalTestCaseList = categories => {
   let pluginTestCases = []
+  testCaseList = []
+  displayTestCaseList = []
   categories.forEach(category => {
     pluginTestCases = testCasesFromTestsFolder.filter(item => {
       if (item.plugin !== undefined) {
@@ -450,7 +459,7 @@ const showMenu = async () => {
     },
   ]
   Inquirer.prompt(questions).then(answers => {
-    if (deviceIP.toString() === answers.input) showCategories()
+    if (deviceIP.includes(answers.input)) showCategories()
     else {
       console.log(
         Chalk.red.bold(
